@@ -6,12 +6,11 @@ import { cn } from '@/lib/utils';
 
 interface ProfileScreenProps {
   userEmail: string;
-  displayName?: string;
   onLogout: () => void;
 }
 
-export function ProfileScreen({ userEmail, displayName, onLogout }: ProfileScreenProps) {
-  const { theme, setTheme } = useTheme();
+export function ProfileScreen({ userEmail, onLogout }: ProfileScreenProps) {
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   const themeOptions = [
     { value: 'light', icon: Sun, label: 'Light' },
@@ -41,9 +40,7 @@ export function ProfileScreen({ userEmail, displayName, onLogout }: ProfileScree
                 <User className="w-8 h-8 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">
-                  {displayName || 'Welcome'}
-                </CardTitle>
+                <CardTitle className="text-lg">Welcome</CardTitle>
                 <CardDescription className="text-sm break-all">
                   {userEmail}
                 </CardDescription>

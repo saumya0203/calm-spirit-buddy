@@ -163,7 +163,7 @@
   }
 
   .gradient-calm {
-    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%);
+    background: var(--gradient-calm);
   }
 
   .gradient-sage {
