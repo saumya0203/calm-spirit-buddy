@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, Save, Check } from 'lucide-react';
+import { Heart, Save, Check, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MoodSelector } from './MoodSelector';
@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils';
 interface MoodLogScreenProps {
   onSaveMood: (entry: Omit<MoodEntry, 'id' | 'timestamp'>) => void;
   recentMoods: MoodEntry[];
+  isLoading?: boolean;
 }
 
-export function MoodLogScreen({ onSaveMood, recentMoods }: MoodLogScreenProps) {
+export function MoodLogScreen({ onSaveMood, recentMoods, isLoading }: MoodLogScreenProps) {
   const [selectedMood, setSelectedMood] = useState<{ value: string; emoji: string; label: string } | null>(null);
   const [journal, setJournal] = useState('');
   const [isSaved, setIsSaved] = useState(false);
@@ -117,13 +118,17 @@ export function MoodLogScreen({ onSaveMood, recentMoods }: MoodLogScreenProps) {
         )}
 
         {/* Recent Moods */}
-        {recentMoods.length > 0 && (
-          <Card variant="glass" className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            <CardHeader>
-              <CardTitle>Recent Check-ins</CardTitle>
-              <CardDescription>Your mood journey over time</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card variant="glass" className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <CardHeader>
+            <CardTitle>Recent Check-ins</CardTitle>
+            <CardDescription>Your mood journey over time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : recentMoods.length > 0 ? (
               <div className="space-y-3">
                 {recentMoods.slice(0, 5).map((mood) => (
                   <div
@@ -150,9 +155,13 @@ export function MoodLogScreen({ onSaveMood, recentMoods }: MoodLogScreenProps) {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                No check-ins yet. Start by selecting a mood above.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
