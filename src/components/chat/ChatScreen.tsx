@@ -4,44 +4,8 @@ import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import type { Message, Sentiment } from '@/types';
 import { cn } from '@/lib/utils';
-
-// Simple sentiment analysis (will be replaced with AI backend)
-function analyzeSentiment(text: string): Sentiment {
-  const positiveWords = ['happy', 'good', 'great', 'wonderful', 'excited', 'love', 'grateful', 'thankful', 'joy', 'amazing', 'better', 'hope', 'hopeful'];
-  const negativeWords = ['sad', 'angry', 'upset', 'depressed', 'anxious', 'worried', 'stressed', 'tired', 'exhausted', 'lonely', 'scared', 'hurt', 'pain', 'bad', 'terrible', 'awful'];
-  
-  const lowerText = text.toLowerCase();
-  const positiveCount = positiveWords.filter(word => lowerText.includes(word)).length;
-  const negativeCount = negativeWords.filter(word => lowerText.includes(word)).length;
-  
-  if (positiveCount > negativeCount) return 'positive';
-  if (negativeCount > positiveCount) return 'negative';
-  return 'neutral';
-}
-
-// Empathetic response generator (will be replaced with AI backend)
-function generateResponse(userMessage: string, sentiment: Sentiment): string {
-  const responses: Record<Sentiment, string[]> = {
-    positive: [
-      "I'm so glad to hear that! It's wonderful when we can recognize and celebrate the good moments in our lives. What do you think contributed to this positive feeling?",
-      "That's beautiful to hear. Positive emotions are worth savoring. Would you like to tell me more about what's bringing you joy?",
-      "How lovely! It sounds like things are going well. Remember to take a moment to appreciate these feelings.",
-    ],
-    neutral: [
-      "Thank you for sharing that with me. I'm here to listen whenever you need to talk. Is there anything specific on your mind today?",
-      "I appreciate you opening up. Sometimes just expressing our thoughts can bring clarity. How are you feeling about things overall?",
-      "I hear you. It's okay to just be present with whatever you're experiencing right now. Would you like to explore any particular thoughts?",
-    ],
-    negative: [
-      "I'm really sorry you're going through this. Your feelings are valid, and it takes courage to express them. I'm here with you. Would you like to tell me more?",
-      "That sounds really difficult, and I want you to know that it's okay to feel this way. You don't have to face these feelings alone. What would feel most supportive right now?",
-      "I hear you, and I'm truly sorry you're experiencing this. Remember, seeking support is a sign of strength. Let's take this one moment at a time together.",
-    ],
-  };
-
-  const options = responses[sentiment];
-  return options[Math.floor(Math.random() * options.length)];
-}
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([
@@ -54,6 +18,7 @@ export function ChatScreen() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -72,22 +37,51 @@ export function ChatScreen() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    try {
+      // Build conversation history for context
+      const conversationHistory = messages.slice(-10).map(m => ({
+        role: m.role,
+        content: m.content
+      }));
 
-    const sentiment = analyzeSentiment(content);
-    const responseText = generateResponse(content, sentiment);
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: { 
+          message: content,
+          conversationHistory 
+        }
+      });
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      content: responseText,
-      role: 'assistant',
-      sentiment,
-      timestamp: new Date(),
-    };
+      if (error) throw error;
 
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsLoading(false);
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: data.response,
+        role: 'assistant',
+        sentiment: data.sentiment as Sentiment,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast({
+        title: "Connection issue",
+        description: "Having trouble connecting. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Add a fallback response
+      const fallbackMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm having a moment of reflection. Could you share that with me again?",
+        role: 'assistant',
+        sentiment: 'neutral',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, fallbackMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
